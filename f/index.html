@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Persons App</title>
+    <style>
+        body {
+    font-family: sans-serif;
+}
+
+h1, h2 {
+    text-align: center;
+}
+
+label {
+    display: inline-block;
+    width: 80px;
+}
+
+input, select {
+    padding: 5px;
+    margin-bottom: 10px;
+    width: 200px;
+}
+
+button {
+    padding: 5px 10px;
+    margin-left: 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #3E8E41;
+}
+
+#personsList {
+    margin-top: 20px;
+}
+
+#personsList div {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+#personsList p {
+    margin: 0;
+    font-weight: bold;
+}
+
+.editPerson, .deletePerson {
+    background-color: #008CBA;
+}
+
+.editPerson:hover, .deletePerson:hover {
+    background-color: #0077A3;
+}
+
+#updatePerson {
+    background-color: #f44336;
+}
+
+#updatePerson:hover {
+    background-color: #d32f2f;
+}
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>Persons App</h1>
+
+    <label for="name">Name:</label>
+    <input type="text" id="name"><br><br>
+
+    <label for="age">Age:</label>
+    <input type="number" id="age"><br><br>
+
+    <label for="gender">Gender:</label>
+    <select id="gender">
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+        <option value="other">Other</option>
+    </select><br><br>
+
+    <label for="email">Email:</label>
+    <input type="email" id="email"><br><br>
+
+    <button id="addPerson">Add Person</button>
+
+    <hr>
+
+    <h2>Persons List</h2>
+
+    <div id="personsList"></div>
+
+    <script>
+        // Get all persons
+        function getPersons() {
+            $.get('/persons', function(data) {
+                $('#personsList').empty(); // clear the list before re-populating
+                $.each(data, function(i, person) {
+                    $('#personsList').append('<div><p><strong>' + person.name + '</strong> (' + person.age + ')</p>' +
+                        '<button class="editPerson" data-id="' + person.id + '">Edit</button>' +
+                        '<button class="deletePerson" data-id="' + person.id + '">Delete</button></div>');
+                });
+            });
+        }
+        getPersons(); // call the function to populate the list when the page loads
+
+        // Add a new person
+        $('#addPerson').click(function() {
+            var name = $('#name').val();
+            var age = $('#age').val();
+            var gender = $('#gender').val();
+            var email = $('#email').val();
+
+            $.ajax({
+                type: 'POST',
+                url: '/persons',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    name: name,
+                    age: age,
+                    gender: gender,
+                    email: email
+                }),
+                success: function(data) {
+                    $('#name').val(''); // clear the form fields after adding a person
+                    $('#age').val('');
+                    $('#gender').val('male');
+                    $('#email').val('');
+                    getPersons(); // re-populate the list after adding a person
+                },
+                error: function() {
+                    alert('Error adding person');
+                }
+            });
+        });
+
+        // Edit a person
+        $(document).on('click', '.editPerson', function() {
+            var id = $(this).data('id');
+            $.get('/persons/' + id, function(data) {
+                $('#name').val(data.name); // populate the form fields with the person's data
+                $('#age').val(data.age);
+                $('#gender').val(data.gender);
+                $('#email').val(data.email);
+
+                // change the button to update mode
+                $('#addPerson').hide();
+                $('#updatePerson').remove();
+                $('#deletePerson').hide();
+                $('#personForm').append('<button id="updatePerson" data-id="' + id + '">Update Person</button>');
+            });
+        });
+
+        // Update a person
+        $(document).on('click', '#updatePerson', function() {
+            var id = $(this).data('id');
+            var name = $('#name').val();
+            var age = $('#age').val();
+            var gender = $('#gender').val();
+            var email = $('#email').val();
+
+            $.ajax({
+                type: 'PUT',
+                url: '/persons/' + id,
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    name: name,
+                    age: age,
+                    gender: gender,
+                    email: email
+                }),
+                success: function(data) {
+                    $('#name').val(''); // clear the form fields after updating a person
+                    $('#age').val('');
+                    $('#gender').val('male');
+                    $('#email').val('');
+                    $('#updatePerson').remove(); // change the button back to add mode
+                    $('#addPerson').show();
+                    $('#deletePerson').show();
+                    getPersons(); // re-populate the list after updating a person
+                },
+                error: function() {
+                    alert('Error updating person');
+                }
+            });
+        });
+
+        // Delete a person
+        $(document).on('click', '.deletePerson', function() {
+            var id = $(this).data('id');
+            if (confirm('Are you sure you want to delete this person?')) {
+                $.ajax({
+                    type: 'DELETE',
+                    url: '/persons/' + id,
+                    success: function() {
+                        getPersons(); // re-populate the list after deleting a person
+                    },
+                    error: function() {
+                        alert('Error deleting person');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
